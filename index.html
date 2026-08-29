@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仙魔异世录 - 真实修仙魔法AI游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        .glass-bg {
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col items-center p-2 sm:p-4" style="background-image: url('https://img.paulzzh.com/touhou/random?v=1'); background-size: cover; background-position: center; background-attachment: fixed;">
+
+    <!-- 顶栏 -->
+    <header class="w-full max-w-5xl glass-bg border border-slate-700 rounded-t-xl p-4 shadow-xl z-10 flex justify-between items-center sticky top-0">
+        <h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200 tracking-wider">
+            🌌 仙魔异世录
+        </h1>
+        <div class="flex items-center gap-3">
+            <input type="password" id="apiKey" placeholder="在此粘贴 Gemini API Key" class="bg-slate-800 border border-slate-600 text-sm px-3 py-2 rounded-lg text-slate-200 w-48 sm:w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <button onclick="toggleBackpack()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-1.5 shadow">
+                📦 打开背包 <span id="pill-count-badge" class="bg-red-600 text-xs px-2 py-0.5 rounded-full">1/3</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主体 -->
+    <main class="w-full max-w-5xl glass-bg rounded-b-xl shadow-2xl flex flex-col lg:flex-row flex-grow border border-t-0 border-slate-700 overflow-hidden">
+        
+        <!-- 左侧面板 -->
+        <aside class="lg:w-72 border-r border-slate-700 p-4 flex flex-col gap-4 bg-slate-900/50">
+            <div class="flex flex-col items-center gap-2 p-4 rounded-xl bg-slate-900/90 border border-slate-600 shadow-inner">
+                <div class="w-24 h-24 rounded-full border-2 border-amber-500 overflow-hidden bg-slate-800 shadow">
+                    <img id="player-avatar" src="https://api.dicebear.com/8.x/notionists-neutral/svg?seed=default" class="w-full h-full object-cover">
+                </div>
+                <div class="text-center">
+                    <div id="ui-id" class="text-base font-bold text-amber-300">（主人）</div>
+                    <div id="ui-faction" class="text-xs text-cyan-300 bg-cyan-950 px-2.5 py-0.5 rounded-full inline-block mt-1.5 border border-cyan-800">东方修仙</div>
+                </div>
+            </div>
+
+            <div class="space-y-3 text-sm">
+                <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 flex justify-between"><span>境界</span><span id="ui-level" class="text-emerald-400 font-bold">Lv.1 凡人</span></div>
+                <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 flex justify-between"><span>碎银</span><span id="ui-money" class="text-amber-400 font-bold">100两</span></div>
+                <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 space-y-1.5">
+                    <div class="flex justify-between"><span>气血 (HP)</span><span id="ui-hp" class="text-red-400 font-bold">100/100</span></div>
+                    <div class="w-full bg-slate-800 h-2 rounded overflow-hidden"><div id="hp-bar" class="bg-red-600 h-full w-full"></div></div>
+                </div>
+                <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 space-y-1.5">
+                    <div class="flex justify-between"><span>真气 (MP)</span><span id="ui-blue" class="text-blue-400 font-bold">50/50</span></div>
+                    <div class="w-full bg-slate-800 h-2 rounded overflow-hidden"><div id="mp-bar" class="bg-blue-600 h-full w-full"></div></div>
+                </div>
+                <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 space-y-1.5">
+                    <div class="flex justify-between"><span>体力 (AP)</span><span id="ui-ap" class="text-yellow-400 font-bold">10/10</span></div>
+                    <div class="w-full bg-slate-800 h-2 rounded overflow-hidden"><div id="ap-bar" class="bg-yellow-500 h-full w-full"></div></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 右侧视窗 -->
+        <section class="flex-grow flex flex-col bg-slate-950/70">
+            <!-- 剧情框：大字号阅读 -->
+            <div id="story-box" class="flex-grow p-5 space-y-4 overflow-y-auto text-slate-100 text-base leading-loose max-h-[520px]">
+                <div class="bg-slate-900/90 border border-amber-500/40 p-4 rounded-xl shadow">
+                    <div class="text-amber-400 font-bold text-sm mb-1">【世界主脑提示】</div>
+                    请在上方输入你的 **Gemini API Key**，然后点击下方选择阵营开启你的专属修仙魔法旅程！
+                </div>
+            </div>
+
+            <!-- 底部选择与输入区域 -->
+            <footer class="bg-slate-900 border-t border-slate-700 p-4">
+                <div id="choices-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <button onclick="promptStartGame('东方修仙', '青云镇')" class="bg-slate-800 hover:bg-slate-700 border border-amber-500/60 text-amber-300 p-3 rounded-xl text-left text-sm font-bold transition shadow">
+                        ⛩️ 选择【东方修仙阵营】<br><span class="text-xs text-slate-400 font-normal">（御剑、炼丹、宗门争霸）</span>
+                    </button>
+                    <button onclick="promptStartGame('西方魔法', '晨曦镇')" class="bg-slate-800 hover:bg-slate-700 border border-sky-500/60 text-sky-300 p-3 rounded-xl text-left text-sm font-bold transition shadow">
+                        ✨ 选择【西方魔法阵营】<br><span class="text-xs text-slate-400 font-normal">（元素、法师塔、禁咒魔药）</span>
+                    </button>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="custom-input" placeholder="输入自定义行动（如：打开背包、四处打听、修炼...）" class="flex-grow bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
+                    <button onclick="sendAction()" class="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition shadow">执行</button>
+                </div>
+            </footer>
+        </section>
+    </main>
+
+    <!-- 背包弹窗 -->
+    <div id="backpack-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-xl p-5 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-amber-400 text-base">📦 随身背包</h3>
+                <button onclick="toggleBackpack()" class="text-slate-400 text-sm hover:text-white">✕ 关闭</button>
+            </div>
+            <div id="backpack-content" class="space-y-2 text-sm text-slate-200 max-h-60 overflow-y-auto mb-3"></div>
+        </div>
+    </div>
+
+    <script>
+        let player = {
+            name: "（主人）",
+            faction: "东方修仙",
+            level: "Lv.1 凡人",
+            money: 100,
+            hp: 100, maxHp: 100,
+            mp: 50, maxMp: 50,
+            ap: 10, maxAp: 10,
+            pills: ["下品聚气丹 x1"],
+            inventory: ["新手铁剑(未绑定) x1"]
+        };
+
+        let chatHistory = [];
+
+        function updateUI() {
+            document.getElementById("ui-id").innerText = player.name;
+            document.getElementById("ui-faction").innerText = player.faction;
+            document.getElementById("ui-level").innerText = player.level;
+            document.getElementById("ui-money").innerText = player.money + "两";
+            document.getElementById("ui-hp").innerText = `${player.hp}/${player.maxHp}`;
+            document.getElementById("ui-blue").innerText = `${player.mp}/${player.maxMp}`;
+            document.getElementById("ui-ap").innerText = `${player.ap}/${player.maxAp}`;
+            document.getElementById("pill-count-badge").innerText = `${player.pills.length}/3`;
+            document.getElementById("hp-bar").style.width = (player.hp / player.maxHp * 100) + "%";
+            document.getElementById("mp-bar").style.width = (player.mp / player.maxMp * 100) + "%";
+            document.getElementById("ap-bar").style.width = (player.ap / player.maxAp * 100) + "%";
+        }
+
+        function appendLog(sender, text) {
+            const box = document.getElementById("story-box");
+            box.innerHTML += `<div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 shadow"><span class="text-amber-400 font-bold text-sm block mb-1">${sender}：</span><span class="text-slate-100 text-base leading-relaxed">${text}</span></div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function toggleBackpack() {
+            const modal = document.getElementById("backpack-modal");
+            modal.classList.toggle("hidden");
+            const content = document.getElementById("backpack-content");
+            let html = `<div class="text-amber-300 font-bold mb-1.5 text-sm">【回复丹药上限 3枚】</div>`;
+            player.pills.forEach(p => html += `<div class="bg-slate-950 p-2 rounded border border-slate-800">💊 ${p}</div>`);
+            html += `<div class="text-cyan-300 font-bold mt-3 mb-1.5 text-sm">【其他装备/道具】</div>`;
+            player.inventory.forEach(i => html += `<div class="bg-slate-950 p-2 rounded border border-slate-800">⚔️ ${i}</div>`);
+            content.innerHTML = html || '<div class="text-slate-500">空空如也</div>';
+        }
+
+        async function callGemini(promptText, displayPrompt = null) {
+            const apiKey = document.getElementById("apiKey").value.trim();
+            if (!apiKey) {
+                alert("请先在右上角填入你的 Gemini API Key！");
+                return;
+            }
+
+            appendLog("你", displayPrompt || promptText);
+            chatHistory.push({ role: "user", parts: [{ text: promptText }] });
+
+            appendLog("世界主脑", "天道推演中...");
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        system_instruction: {
+                            parts: [{ text: "你是修仙与西方魔法交织世界的AI主脑DM。根据玩家选择推进剧情，生成沉浸感故事。极其重要：请绝对不要把选项写在正文里。所有4个后续选项（必须分别以 A. B. C. D. 开头）必须在回复的最末尾单独成行输出，以便程序自动提取到按钮区。" }]
+                        },
+                        contents: chatHistory
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+
+                let reply = data.candidates[0].content.parts[0].text;
+                
+                // 移除“推演中”提示
+                const box = document.getElementById("story-box");
+                box.lastChild.remove();
+
+                // 精准提取并剥离 A B C D 选项
+                let options = [];
+                let cleanReply = reply;
+
+                const optionRegex = /([A-D]\.\s*[^\n]+)/g;
+                let matches = reply.match(optionRegex);
+                if (matches && matches.length >= 2) {
+                    options = matches.slice(0, 4);
+                    // 裁剪掉正文末尾包含选项的部分
+                    let splitIndex = reply.search(/[A-D]\.\s/);
+                    if (splitIndex !== -1) {
+                        cleanReply = reply.substring(0, splitIndex).trim();
+                    }
+                }
+
+                appendLog("世界主脑", cleanReply);
+                chatHistory.push({ role: "model", parts: [{ text: reply }] });
+
+                renderDynamicChoices(options);
+
+            } catch (err) {
+                console.error(err);
+                const box = document.getElementById("story-box");
+                if (box.lastChild) box.lastChild.remove();
+                appendLog("系统错误", "调用 Gemini API 失败: " + err.message);
+            }
+        }
+
+        function promptStartGame(faction, town) {
+            let customName = prompt(`请为你的角色输入心仪的名称：`, "（主人）");
+            if (!customName || customName.trim() === "") return;
+
+            player.faction = faction;
+            player.name = customName.trim();
+            updateUI();
+            document.getElementById("player-avatar").src = `https://api.dicebear.com/8.x/notionists-neutral/svg?seed=${player.name}`;
+            
+            const initPrompt = `我选择了【${faction}】阵营，我的角色名叫【${player.name}】，降生于【${town}】。请为我开启人生，描述我刚到此地的初始场景，并随机触发一个初级奇遇或遭遇。结尾必须给出A、B、C、D四个不同的后续行动选项。`;
+            callGemini(initPrompt, `我创建了角色【${player.name}】，选择了【${faction}】阵营（降生于${town}）`);
+        }
+
+        function sendAction() {
+            const input = document.getElementById("custom-input");
+            const val = input.value.trim();
+            if (!val) return;
+            if (val === "打开背包") {
+                toggleBackpack();
+                input.value = "";
+                return;
+            }
+            input.value = "";
+            callGemini(val);
+        }
+
+        function renderDynamicChoices(options) {
+            const container = document.getElementById("choices-container");
+            if (!options || options.length === 0) {
+                container.innerHTML = `
+                    <button onclick="callGemini('A. 四处寻找机缘与灵气浓郁之地')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 p-3 rounded-xl text-left text-sm font-bold transition shadow">A. 四处寻找机缘与灵气浓郁之地</button>
+                    <button onclick="callGemini('B. 前往坊市或镇中心打听消息')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 p-3 rounded-xl text-left text-sm font-bold transition shadow">B. 前往坊市或镇中心打听消息</button>
+                    <button onclick="callGemini('C. 就地找安全地方打坐闭关修炼')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-300 p-3 rounded-xl text-left text-sm font-bold transition shadow">C. 就地找安全地方打坐闭关修炼</button>
+                    <button onclick="callGemini('D. 检查装备，准备前往野外秘境搜打撤')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 p-3 rounded-xl text-left text-sm font-bold transition shadow">D. 检查装备，准备前往野外秘境搜打撤</button>
+                `;
+                return;
+            }
+
+            let html = "";
+            options.forEach(opt => {
+                let cleanOpt = opt.replace(/"/g, '&quot;');
+                html += `<button onclick="callGemini('${cleanOpt}')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 p-3 rounded-xl text-left text-sm font-bold transition shadow">${cleanOpt}</button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
